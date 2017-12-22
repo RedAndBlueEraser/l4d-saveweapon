@@ -290,11 +290,11 @@ void LoadPlayerState(int client)
 	if (!IsPlayerAlive(client)) return;
 
 	// Load equipment.
-	if (weapons2[client][slot2][0] != '\0') GivePlayerItem2(client, weapons2[client][slot2], 2);
-	if (weapons2[client][slot3][0] != '\0') GivePlayerItem2(client, weapons2[client][slot3], 3);
-	if (weapons2[client][slot4][0] != '\0') GivePlayerItem2(client, weapons2[client][slot4], 4);
+	if (weapons2[client][slot2][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 2, weapons2[client][slot2]);
+	if (weapons2[client][slot3][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 3, weapons2[client][slot3]);
+	if (weapons2[client][slot4][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 4, weapons2[client][slot4]);
 	// Load slot1 (secondary weapon, sidearm).
-	int item = GivePlayerItem2(client, "weapon_pistol", 1);
+	int item = GiveIfNotHasPlayerItemSlot(client, 1, "weapon_pistol");
 	if (item > -1)
 	{
 		if (weapons1[client][slot1IsDualWield]) SetEntProp(item, Prop_Send, "m_hasDualWeapons", 1);
@@ -305,7 +305,7 @@ void LoadPlayerState(int client)
 	 */
 	if (weapons2[client][slot0][0] != '\0')
 	{
-		item = GivePlayerItem2(client, weapons2[client][slot0], 0);
+		item = GiveIfNotHasPlayerItemSlot(client, 0, weapons2[client][slot0]);
 		if (item > -1)
 		{
 			SetEntProp(item, Prop_Send, "m_iClip1", weapons1[client][slot0MagazineAmmo]);
@@ -315,7 +315,7 @@ void LoadPlayerState(int client)
 	/* Load slot5 (carried gas can, oxygen tank, or propane tank). Loaded last
 	 * so it's the one yielded.
 	 */
-	if (weapons2[client][slot5][0] != '\0') GivePlayerItem2(client, weapons2[client][slot5], 5);
+	if (weapons2[client][slot5][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 5, weapons2[client][slot5]);
 
 	// Load health.
 	SetEntProp(client, Prop_Send, "m_iHealth", weapons1[client][health]);
@@ -355,23 +355,9 @@ void DeleteAllPlayerStates()
 	for (int i = 1; i <= MaxClients; i++) DeletePlayerState(i);
 }
 
-/* Give and equip a survivor with an item if they don't have the item in the
- * specified slot.
- */
-int GivePlayerItem2(int client, const char[] item, int slot = -1)
+/* Give and equip a survivor with an item. */
+int GivePlayerItem2(int client, const char[] item)
 {
-	if (slot > -1)
-	{
-		int existingItem = GetPlayerWeaponSlot(client, slot);
-		if (existingItem > -1)
-		{
-			char existingItemClassname[sizeof(weapons2[][])];
-			GetEdictClassname(existingItem, existingItemClassname, sizeof(existingItemClassname));
-			if (StrEqual(existingItemClassname, weapons2[client][slot])) return existingItem;
-			else if (slot != 5) RemovePlayerItem2(client, existingItem);
-			else RemoveEdict(existingItem); // TODO: Avoid using RemoveEdict().
-		}
-	}
 	int newItem = GivePlayerItem(client, item);
 	if (newItem > -1) EquipPlayerWeapon(client, newItem);
 	return newItem;
@@ -381,6 +367,23 @@ int GivePlayerItem2(int client, const char[] item, int slot = -1)
 void RemovePlayerItem2(int client, int item)
 {
 	if (RemovePlayerItem(client, item)) AcceptEntityInput(item, "Kill");
+}
+
+/* Give and equip a survivor with an item if they don't already have the item
+ * in the specified slot, removing any mismatched item in the slot (if present).
+ */
+int GiveIfNotHasPlayerItemSlot(int client, int slot, const char[] item)
+{
+	int existingItem = GetPlayerWeaponSlot(client, slot);
+	if (existingItem > -1)
+	{
+		char existingItemClassname[sizeof(weapons2[][])];
+		GetEdictClassname(existingItem, existingItemClassname, sizeof(existingItemClassname));
+		if (StrEqual(existingItemClassname, item)) return existingItem;
+		else if (slot != 5) RemovePlayerItem2(client, existingItem);
+		else RemoveEdict(existingItem);
+	}
+	return GivePlayerItem2(client, item);
 }
 
 // Get the reserve ammo carried for an item by a survivor.
