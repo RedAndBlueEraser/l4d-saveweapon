@@ -21,7 +21,7 @@
  * the safe room, replacing a few hard-coded constants with Cvar queries, and
  * giving gas cans, oxygen tanks and propane tanks.
  *
- * Version 20171218 (4.3-alpha1)
+ * Version 20171221 (4.3-alpha1)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -54,7 +54,8 @@ enum weaps1
 	isGoingToDie,
 	survivorCharacter,
 	isActive,
-	isLoaded
+	isLoaded,
+	activeWeaponSlot
 };
 int weapons1[MAXPLAYERS + 1][weaps1];
 enum weaps2
@@ -226,12 +227,16 @@ void SavePlayerState(int client)
 
 	// Save equipment.
 	int item;
+	int activeItem = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+
 	item = GetPlayerWeaponSlot(client, 0);
 	if (item > -1)
 	{
 		GetEdictClassname(item, weapons2[client][slot0], sizeof(weapons2[][]));
 		weapons1[client][slot0MagazineAmmo] = GetEntProp(item, Prop_Send, "m_iClip1");
 		weapons1[client][slot0ReserveAmmo] = GetPlayerAmmo(client, item);
+
+		if (item == activeItem) weapons1[client][activeWeaponSlot] = 0;
 	}
 	item = GetPlayerWeaponSlot(client, 1);
 	if (item > -1)
@@ -239,15 +244,18 @@ void SavePlayerState(int client)
 		GetEdictClassname(item, weapons2[client][slot1], sizeof(weapons2[][]));
 		if (GetEntProp(item, Prop_Send, "m_hasDualWeapons")) weapons1[client][slot1IsDualWield] = 1;
 		weapons1[client][slot1MagazineAmmo] = GetEntProp(item, Prop_Send, "m_iClip1");
+
+		if (item == activeItem) weapons1[client][activeWeaponSlot] = 1;
 	}
-	item = GetPlayerWeaponSlot(client, 2);
-	if (item > -1) GetEdictClassname(item, weapons2[client][slot2], sizeof(weapons2[][]));
-	item = GetPlayerWeaponSlot(client, 3);
-	if (item > -1) GetEdictClassname(item, weapons2[client][slot3], sizeof(weapons2[][]));
-	item = GetPlayerWeaponSlot(client, 4);
-	if (item > -1) GetEdictClassname(item, weapons2[client][slot4], sizeof(weapons2[][]));
-	item = GetPlayerWeaponSlot(client, 5);
-	if (item > -1) GetEdictClassname(item, weapons2[client][slot5], sizeof(weapons2[][]));
+	for (int slot = 2; slot <= 5; slot++)
+	{
+		item = GetPlayerWeaponSlot(client, slot);
+		if (item > -1)
+		{
+			GetEdictClassname(item, weapons2[client][slot], sizeof(weapons2[][]));
+			if (item == activeItem) weapons1[client][activeWeaponSlot] = slot;
+		}
+	}
 
 	// Save health.
 	if (GetEntProp(client, Prop_Send, "m_isIncapacitated"))
@@ -316,6 +324,12 @@ void LoadPlayerState(int client)
 	 * so it's the one yielded.
 	 */
 	if (weapons2[client][slot5][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 5, weapons2[client][slot5]);
+	// Set active weapon, so it's the one yielded.
+	if (weapons1[client][activeWeaponSlot] > -1)
+	{
+		item = GetPlayerWeaponSlot(client, weapons1[client][activeWeaponSlot]);
+		if (item > -1) SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", item);
+	}
 
 	// Load health.
 	SetEntProp(client, Prop_Send, "m_iHealth", weapons1[client][health]);
@@ -340,6 +354,7 @@ void DeletePlayerState(int client)
 	weapons2[client][slot3][0] = '\0';
 	weapons2[client][slot4][0] = '\0';
 	weapons2[client][slot5][0] = '\0';
+	weapons1[client][activeWeaponSlot] = -1;
 	weapons1[client][health] = 100;
 	weapons1[client][healthTemp] = 0;
 	weapons1[client][healthTempTime] = 0;
