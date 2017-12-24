@@ -34,6 +34,9 @@
 
 #define PLUGIN_VERSION "4.3"
 
+#define MAX_GAME_MODE_NAME_LEN 16
+#define MAX_ENTITY_CLASSNAME_LEN 24
+#define MAX_ENTITY_MODEL_NAME_LEN 40
 #define TEAM_SURVIVORS 2
 char SURVIVOR_NAMES[][] = { "Bill", "Zoey", "Francis", "Louis" };
 
@@ -41,34 +44,30 @@ bool isSavable = false;
 bool botsCanAppropriate = true;
 bool isMapTransition = false;
 
-enum weaps1
+bool isActive[MAXPLAYERS + 1]; // Whether the player state exists (that is, can be loaded from).
+bool isLoaded[MAXPLAYERS + 1]; // Whether the player state has already been loaded.
+enum Slot
 {
-	slot0MagazineAmmo,
-	slot0ReserveAmmo,
-	slot1IsDualWield,
-	slot1MagazineAmmo,
-	health,
-	healthTemp,
-	healthTempTime,
-	reviveCount,
-	isGoingToDie,
-	survivorCharacter,
-	isActive,
-	isLoaded,
-	activeWeaponSlot
+	Slot_0, // Primary weapon.
+	Slot_1, // Secondary weapon, sidearm. Usually only "weapon_pistol".
+	Slot_2, // Grenade.
+	Slot_3, // First aid kit.
+	Slot_4, // Pain pills.
+	Slot_5  // Carry item; gas cans, oxygen tanks, or propane tanks.
 };
-int weapons1[MAXPLAYERS + 1][weaps1];
-enum weaps2
-{
-	slot0,
-	slot1,
-	slot2,
-	slot3,
-	slot4,
-	slot5,
-	survivorModel
-};
-char weapons2[MAXPLAYERS + 1][weaps2][64];
+char slots[MAXPLAYERS + 1][Slot][MAX_ENTITY_CLASSNAME_LEN]; // Weapons.
+int slot0MagazineAmmo[MAXPLAYERS + 1]; // Primary weapon magazine ammo.
+int slot0ReserveAmmo[MAXPLAYERS + 1];  // Primary weapon reserve ammo.
+int slot1MagazineAmmo[MAXPLAYERS + 1]; // Secondary weapon magazine ammo.
+bool slot1IsDualWield[MAXPLAYERS + 1]; // Whether the survivor is dual wielding pistols.
+int activeSlot[MAXPLAYERS + 1];        // Current weapon slot.
+int health[MAXPLAYERS + 1];            // Permanent health.
+float healthTemp[MAXPLAYERS + 1];      // Temporary health.
+float healthTempTime[MAXPLAYERS + 1];  // Temporary health time.
+int reviveCount[MAXPLAYERS + 1];       // Number of times revived since using a first aid kit.
+bool isGoingToDie[MAXPLAYERS + 1];     // Whether the next incapacitation will kill the survivor.
+int survivorCharacter[MAXPLAYERS + 1]; // Survivor character.
+char survivorModel[MAXPLAYERS + 1][MAX_ENTITY_MODEL_NAME_LEN]; // Survivor model.
 
 public Plugin myinfo =
 {
@@ -93,7 +92,7 @@ public void OnPluginStart()
 public void OnMapStart()
 {
 	// Player states should be saved only in co-operative campaign mode.
-	char gameMode[16];
+	char gameMode[MAX_GAME_MODE_NAME_LEN];
 	FindConVar("mp_gamemode").GetString(gameMode, sizeof(gameMode));
 	isSavable = StrEqual(gameMode, "coop", false);
 
@@ -113,7 +112,7 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 	/* Reset player states' loaded status when a new round begins. (isLoaded is
 	 * 1 if already loaded in current round).
 	 */
-	for (int client = 1; client <= MaxClients; client++) weapons1[client][isLoaded] = 0;
+	for (int client = 1; client <= MaxClients; client++) isLoaded[client] = false;
 	botsCanAppropriate = true;
 }
 
@@ -149,20 +148,16 @@ public Action Timer_LoadPlayerState(Handle handle, int client)
 	 * disconnecting between map changes, bots being autokicked at the end of
 	 * the map, etc).
 	 */
-	if (!weapons1[client][isLoaded] && !weapons1[client][isActive] && IsFakeClient(client) && botsCanAppropriate)
-	{
+	if (!isLoaded[client] && !isActive[client] && IsFakeClient(client) && botsCanAppropriate)
 		for (int client2 = 1; client2 <= MaxClients; client2++)
-		{
-			if (weapons1[client2][isActive] && !IsClientConnected(client2))
+			if (isActive[client2] && !IsClientConnected(client2))
 			{
 				TransferPlayerState(client2, client);
 				break;
 			}
-		}
-	}
 
 	// If the player state has not been loaded in this round, load it.
-	if (weapons1[client][isActive] && !weapons1[client][isLoaded]) LoadPlayerState(client);
+	if (isActive[client] && !isLoaded[client]) LoadPlayerState(client);
 }
 
 /* Disable bot appropriation to prevent idle bots from loading a different
@@ -204,8 +199,22 @@ public Action Event_PlayerBotReplace(Handle event, char[] name, bool dontBroadca
 // Transfer a survivor's player state to another survivor.
 void TransferPlayerState(int srcClient, int destClient)
 {
-	for (int i = 0; i < sizeof(weapons1[]) ; i++) weapons1[destClient][i] = weapons1[srcClient][i];
-	for (int i = 0; i < sizeof(weapons2[]) ; i++) strcopy(weapons2[destClient][i], sizeof(weapons2[][]), weapons2[srcClient][i]);
+	isActive[destClient] = isActive[srcClient];
+	isLoaded[destClient] = isLoaded[srcClient];
+	for (int slot = view_as<int>(Slot_0); slot <= view_as<int>(Slot_5); slot++)
+		strcopy(slots[destClient][slot], sizeof(slots[][]), slots[srcClient][slot]);
+	slot0MagazineAmmo[destClient] = slot0MagazineAmmo[srcClient];
+	slot0ReserveAmmo[destClient] = slot0ReserveAmmo[srcClient];
+	slot1MagazineAmmo[destClient] = slot1MagazineAmmo[srcClient];
+	slot1IsDualWield[destClient] = slot1IsDualWield[srcClient];
+	activeSlot[destClient] = activeSlot[srcClient];
+	health[destClient] = health[srcClient];
+	healthTemp[destClient] = healthTemp[srcClient];
+	healthTempTime[destClient] = healthTempTime[srcClient];
+	reviveCount[destClient] = reviveCount[srcClient];
+	isGoingToDie[destClient] = isGoingToDie[srcClient];
+	survivorCharacter[destClient] = survivorCharacter[srcClient];
+	strcopy(survivorModel[destClient], sizeof(survivorModel[]), survivorModel[srcClient]);
 	DeletePlayerState(srcClient);
 }
 
@@ -213,15 +222,15 @@ void TransferPlayerState(int srcClient, int destClient)
 void SavePlayerState(int client)
 {
 	DeletePlayerState(client);
-	weapons1[client][isActive] = 1;
+	isActive[client] = true;
 
-	weapons1[client][survivorCharacter] = GetEntProp(client, Prop_Send, "m_survivorCharacter");
-	GetClientModel(client, weapons2[client][survivorModel], sizeof(weapons2[][]));
+	survivorCharacter[client] = GetEntProp(client, Prop_Send, "m_survivorCharacter");
+	GetClientModel(client, survivorModel[client], sizeof(survivorModel[]));
 
 	// Resurrect dead survivors.
 	if (!IsPlayerAlive(client))
 	{
-		weapons1[client][health] = FindConVar("z_survivor_respawn_health").IntValue;
+		health[client] = FindConVar("z_survivor_respawn_health").IntValue;
 		return;
 	}
 
@@ -229,50 +238,48 @@ void SavePlayerState(int client)
 	int item;
 	int activeItem = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 
-	item = GetPlayerWeaponSlot(client, 0);
+	item = GetPlayerWeaponSlot(client, view_as<int>(Slot_0));
 	if (item > -1)
 	{
-		GetEdictClassname(item, weapons2[client][slot0], sizeof(weapons2[][]));
-		weapons1[client][slot0MagazineAmmo] = GetEntProp(item, Prop_Send, "m_iClip1");
-		weapons1[client][slot0ReserveAmmo] = GetPlayerAmmo(client, item);
-
-		if (item == activeItem) weapons1[client][activeWeaponSlot] = 0;
+		if (item == activeItem) activeSlot[client] = view_as<int>(Slot_0);
+		GetEdictClassname(item, slots[client][Slot_0], sizeof(slots[][]));
+		slot0MagazineAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1");
+		slot0ReserveAmmo[client] = GetPlayerAmmo(client, item);
 	}
-	item = GetPlayerWeaponSlot(client, 1);
+	item = GetPlayerWeaponSlot(client, view_as<int>(Slot_1));
 	if (item > -1)
 	{
-		GetEdictClassname(item, weapons2[client][slot1], sizeof(weapons2[][]));
-		if (GetEntProp(item, Prop_Send, "m_hasDualWeapons")) weapons1[client][slot1IsDualWield] = 1;
-		weapons1[client][slot1MagazineAmmo] = GetEntProp(item, Prop_Send, "m_iClip1");
-
-		if (item == activeItem) weapons1[client][activeWeaponSlot] = 1;
+		if (item == activeItem) activeSlot[client] = view_as<int>(Slot_1);
+		GetEdictClassname(item, slots[client][Slot_1], sizeof(slots[][]));
+		slot1MagazineAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1");
+		if (GetEntProp(item, Prop_Send, "m_hasDualWeapons")) slot1IsDualWield[client] = true;
 	}
-	for (int slot = 2; slot <= 5; slot++)
+	for (int slot = view_as<int>(Slot_2); slot <= view_as<int>(Slot_5); slot++)
 	{
 		item = GetPlayerWeaponSlot(client, slot);
 		if (item > -1)
 		{
-			GetEdictClassname(item, weapons2[client][slot], sizeof(weapons2[][]));
-			if (item == activeItem) weapons1[client][activeWeaponSlot] = slot;
+			if (item == activeItem) activeSlot[client] = slot;
+			GetEdictClassname(item, slots[client][slot], sizeof(slots[][]));
 		}
 	}
 
 	// Save health.
 	if (GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 	{
-		weapons1[client][health] = 1;
-		weapons1[client][healthTemp] = FindConVar("survivor_revive_health").IntValue;
-		weapons1[client][healthTempTime] = 0;
-		weapons1[client][reviveCount] = GetEntProp(client, Prop_Send, "m_currentReviveCount") + 1;
-		if (weapons1[client][reviveCount] >= FindConVar("survivor_max_incapacitated_count").IntValue) weapons1[client][isGoingToDie] = 1;
+		health[client] = 1;
+		healthTemp[client] = FindConVar("survivor_revive_health").FloatValue;
+		healthTempTime[client] = 0.0;
+		reviveCount[client] = GetEntProp(client, Prop_Send, "m_currentReviveCount") + 1;
+		if (reviveCount[client] >= FindConVar("survivor_max_incapacitated_count").IntValue) isGoingToDie[client] = true;
 	}
 	else
 	{
-		weapons1[client][health] = GetClientHealth(client);
-		weapons1[client][healthTemp] = RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
-		weapons1[client][healthTempTime] = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
-		weapons1[client][reviveCount] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
-		weapons1[client][isGoingToDie] = GetEntProp(client, Prop_Send, "m_isGoingToDie");
+		health[client] = GetClientHealth(client);
+		healthTemp[client] = GetEntPropFloat(client, Prop_Send, "m_healthBuffer");
+		healthTempTime[client] = GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime");
+		reviveCount[client] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
+		isGoingToDie[client] = GetEntProp(client, Prop_Send, "m_isGoingToDie") != 0;
 	}
 }
 
@@ -287,87 +294,79 @@ void SaveAllPlayerStates()
 // Load a survivor's player state.
 void LoadPlayerState(int client)
 {
-	weapons1[client][isLoaded] = 1;
+	isLoaded[client] = true;
 
-	SetEntProp(client, Prop_Send, "m_survivorCharacter", weapons1[client][survivorCharacter]);
-	SetEntityModel(client, weapons2[client][survivorModel]);
+	SetEntProp(client, Prop_Send, "m_survivorCharacter", survivorCharacter[client]);
+	SetEntityModel(client, survivorModel[client]);
 
 	// If the client is a bot, set the correct survivor name.
-	if (IsFakeClient(client)) SetClientName(client, SURVIVOR_NAMES[weapons1[client][survivorCharacter]]);
+	if (IsFakeClient(client)) SetClientName(client, SURVIVOR_NAMES[survivorCharacter[client]]);
 
 	if (!IsPlayerAlive(client)) return;
 
 	// Load equipment.
-	if (weapons2[client][slot2][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 2, weapons2[client][slot2]);
-	if (weapons2[client][slot3][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 3, weapons2[client][slot3]);
-	if (weapons2[client][slot4][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 4, weapons2[client][slot4]);
-	// Load slot1 (secondary weapon, sidearm).
-	int item = GiveIfNotHasPlayerItemSlot(client, 1, "weapon_pistol");
+	for (int slot = view_as<int>(Slot_2); slot <= view_as<int>(Slot_4); slot++)
+		if (slots[client][slot][0] != '\0') GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
+	// Load slot 1 (secondary weapon, sidearm).
+	int item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), "weapon_pistol");
 	if (item > -1)
 	{
-		if (weapons1[client][slot1IsDualWield]) SetEntProp(item, Prop_Send, "m_hasDualWeapons", 1);
-		SetEntProp(item, Prop_Send, "m_iClip1", weapons1[client][slot1MagazineAmmo]);
+		SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
+		SetEntProp(item, Prop_Send, "m_hasDualWeapons", slot1IsDualWield[client] ? 1 : 0);
 	}
-	/* Load slot0 (primary weapon). Loaded last so it's the one yielded if
-	 * slot5 is empty.
-	 */
-	if (weapons2[client][slot0][0] != '\0')
+	// Load slot 0 (primary weapon).
+	if (slots[client][Slot_0][0] != '\0')
 	{
-		item = GiveIfNotHasPlayerItemSlot(client, 0, weapons2[client][slot0]);
+		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_0), slots[client][Slot_0]);
 		if (item > -1)
 		{
-			SetEntProp(item, Prop_Send, "m_iClip1", weapons1[client][slot0MagazineAmmo]);
-			SetPlayerAmmo(client, item, weapons1[client][slot0ReserveAmmo]);
+			SetEntProp(item, Prop_Send, "m_iClip1", slot0MagazineAmmo[client]);
+			SetPlayerAmmo(client, item, slot0ReserveAmmo[client]);
 		}
 	}
-	/* Load slot5 (carried gas can, oxygen tank, or propane tank). Loaded last
+	/* Load slot 5 (carried gas can, oxygen tank, or propane tank). Loaded last
 	 * so it's the one yielded.
 	 */
-	if (weapons2[client][slot5][0] != '\0') GiveIfNotHasPlayerItemSlot(client, 5, weapons2[client][slot5]);
+	if (slots[client][Slot_5][0] != '\0') GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_5), slots[client][Slot_5]);
 	// Set active weapon, so it's the one yielded.
-	if (weapons1[client][activeWeaponSlot] > -1)
+	if (activeSlot[client] > -1)
 	{
-		item = GetPlayerWeaponSlot(client, weapons1[client][activeWeaponSlot]);
+		item = GetPlayerWeaponSlot(client, activeSlot[client]);
 		if (item > -1) SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", item);
 	}
 
 	// Load health.
-	SetEntProp(client, Prop_Send, "m_iHealth", weapons1[client][health]);
-	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 1.0 * weapons1[client][healthTemp]);
-	SetEntPropFloat(client, Prop_Send, "m_healthBufferTime", GetGameTime() - 1.0 * weapons1[client][healthTempTime]);
-	SetEntProp(client, Prop_Send, "m_currentReviveCount", weapons1[client][reviveCount]);
-	SetEntProp(client, Prop_Send, "m_isGoingToDie", weapons1[client][isGoingToDie]);
+	SetEntProp(client, Prop_Send, "m_iHealth", health[client]);
+	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", healthTemp[client]);
+	SetEntPropFloat(client, Prop_Send, "m_healthBufferTime", GetGameTime() - healthTempTime[client]);
+	SetEntProp(client, Prop_Send, "m_currentReviveCount", reviveCount[client]);
+	SetEntProp(client, Prop_Send, "m_isGoingToDie", isGoingToDie[client] ? 1 : 0);
 }
 
 // Delete a survivor's player state.
 void DeletePlayerState(int client)
 {
-	weapons1[client][isActive] = 0;
-	weapons1[client][isLoaded] = 0;
-	weapons2[client][slot0][0] = '\0';
-	weapons1[client][slot0MagazineAmmo] = 0;
-	weapons1[client][slot0ReserveAmmo] = 0;
-	weapons2[client][slot1][0] = '\0';
-	weapons1[client][slot1IsDualWield] = 0;
-	weapons1[client][slot1MagazineAmmo] = 0;
-	weapons2[client][slot2][0] = '\0';
-	weapons2[client][slot3][0] = '\0';
-	weapons2[client][slot4][0] = '\0';
-	weapons2[client][slot5][0] = '\0';
-	weapons1[client][activeWeaponSlot] = -1;
-	weapons1[client][health] = 100;
-	weapons1[client][healthTemp] = 0;
-	weapons1[client][healthTempTime] = 0;
-	weapons1[client][reviveCount] = 0;
-	weapons1[client][isGoingToDie] = 0;
-	weapons1[client][survivorCharacter] = -1;
-	weapons2[client][survivorModel][0] = '\0';
+	isActive[client] = false;
+	isLoaded[client] = false;
+	for (int slot = view_as<int>(Slot_0); slot <= view_as<int>(Slot_5); slot++) slots[client][slot][0] = '\0';
+	slot0MagazineAmmo[client] = 0;
+	slot0ReserveAmmo[client] = 0;
+	slot1MagazineAmmo[client] = 0;
+	slot1IsDualWield[client] = false;
+	activeSlot[client] = -1;
+	health[client] = 100;
+	healthTemp[client] = 0.0;
+	healthTempTime[client] = 0.0;
+	reviveCount[client] = 0;
+	isGoingToDie[client] = false;
+	survivorCharacter[client] = -1;
+	survivorModel[client][0] = '\0';
 }
 
 // Delete all survivors' player states.
 void DeleteAllPlayerStates()
 {
-	for (int i = 1; i <= MaxClients; i++) DeletePlayerState(i);
+	for (int client = 1; client <= MaxClients; client++) DeletePlayerState(client);
 }
 
 /* Give and equip a survivor with an item. */
@@ -392,10 +391,10 @@ int GiveIfNotHasPlayerItemSlot(int client, int slot, const char[] item)
 	int existingItem = GetPlayerWeaponSlot(client, slot);
 	if (existingItem > -1)
 	{
-		char existingItemClassname[sizeof(weapons2[][])];
+		char existingItemClassname[MAX_ENTITY_CLASSNAME_LEN];
 		GetEdictClassname(existingItem, existingItemClassname, sizeof(existingItemClassname));
 		if (StrEqual(existingItemClassname, item)) return existingItem;
-		else if (slot != 5) RemovePlayerItem2(client, existingItem);
+		else if (slot != view_as<int>(Slot_5)) RemovePlayerItem2(client, existingItem);
 		else RemoveEdict(existingItem);
 	}
 	return GivePlayerItem2(client, item);
