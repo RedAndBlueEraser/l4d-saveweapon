@@ -38,6 +38,7 @@
 #define MAX_GAME_MODE_NAME_LEN 16
 #define MAX_ENTITY_CLASSNAME_LEN 24
 #define MAX_ENTITY_MODEL_NAME_LEN 40
+
 #define TEAM_SURVIVORS 2
 char SURVIVOR_NAMES[][] = { "Bill", "Zoey", "Francis", "Louis" };
 
@@ -82,7 +83,6 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	CreateConVar("l4d_saveweapon", PLUGIN_VERSION, "L4D Save Weapon version", FCVAR_NOTIFY);
-
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_MapTransition, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn);
@@ -150,12 +150,16 @@ public Action Timer_LoadPlayerState(Handle handle, int client)
 	 * the map, etc).
 	 */
 	if (!isLoaded[client] && !isActive[client] && IsFakeClient(client) && botsCanAppropriate)
+	{
 		for (int client2 = 1; client2 <= MaxClients; client2++)
+		{
 			if (isActive[client2] && !IsClientConnected(client2))
 			{
 				TransferPlayerState(client2, client);
 				break;
 			}
+		}
+	}
 
 	// If the player state has not been loaded in this round, load it.
 	if (isActive[client] && !isLoaded[client]) LoadPlayerState(client);
@@ -272,7 +276,8 @@ void SavePlayerState(int client)
 		healthTemp[client] = FindConVar("survivor_revive_health").FloatValue;
 		healthTempTime[client] = 0.0;
 		reviveCount[client] = GetEntProp(client, Prop_Send, "m_currentReviveCount") + 1;
-		if (reviveCount[client] >= FindConVar("survivor_max_incapacitated_count").IntValue) isGoingToDie[client] = true;
+		if (reviveCount[client] >= FindConVar("survivor_max_incapacitated_count").IntValue)
+			isGoingToDie[client] = true;
 	}
 	else
 	{
@@ -307,7 +312,8 @@ void LoadPlayerState(int client)
 
 	// Load equipment.
 	for (int slot = view_as<int>(Slot_2); slot <= view_as<int>(Slot_4); slot++)
-		if (slots[client][slot][0] != '\0') GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
+		if (slots[client][slot][0] != '\0')
+			GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
 	// Load slot 1 (secondary weapon, sidearm).
 	int item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), "weapon_pistol");
 	if (item > -1)
@@ -328,7 +334,8 @@ void LoadPlayerState(int client)
 	/* Load slot 5 (carried gas can, oxygen tank, or propane tank). Loaded last
 	 * so it's the one yielded.
 	 */
-	if (slots[client][Slot_5][0] != '\0') GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_5), slots[client][Slot_5]);
+	if (slots[client][Slot_5][0] != '\0')
+		GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_5), slots[client][Slot_5]);
 	// Set active weapon, so it's the one yielded.
 	if (activeSlot[client] > -1)
 	{
@@ -349,7 +356,8 @@ void DeletePlayerState(int client)
 {
 	isActive[client] = false;
 	isLoaded[client] = false;
-	for (int slot = view_as<int>(Slot_0); slot <= view_as<int>(Slot_5); slot++) slots[client][slot][0] = '\0';
+	for (int slot = view_as<int>(Slot_0); slot <= view_as<int>(Slot_5); slot++)
+		slots[client][slot][0] = '\0';
 	slot0MagazineAmmo[client] = 0;
 	slot0ReserveAmmo[client] = 0;
 	slot1MagazineAmmo[client] = 0;
