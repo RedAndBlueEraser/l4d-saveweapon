@@ -18,10 +18,11 @@
  *
  * Additions and changes to the original mod include correctly restoring
  * pistol(s) magazine ammo, correctly reviving incapacitated survivors inside
- * the safe room, replacing a few hard-coded constants with Cvar queries, and
- * giving gas cans, oxygen tanks and propane tanks.
+ * the safe room, replacing a few hard-coded constants with Cvar queries,
+ * giving gas cans, oxygen tanks and propane tanks, and remembering active
+ * weapons.
  *
- * Version 20171221 (4.3-alpha1)
+ * Version 20171224 (4.3-alpha2)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
