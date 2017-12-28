@@ -151,16 +151,7 @@ public Action Timer_LoadPlayerState(Handle handle, int client)
 	 * the map, etc).
 	 */
 	if (!isLoaded[client] && !isActive[client] && IsFakeClient(client) && canBotsAppropriate)
-	{
-		for (int client2 = 1; client2 <= MaxClients; client2++)
-		{
-			if (isActive[client2] && !IsClientConnected(client2))
-			{
-				TransferPlayerState(client2, client);
-				break;
-			}
-		}
-	}
+		FindAndAppropriateUnusedPlayerState(client);
 
 	// If the player state has not been loaded in this round, load it.
 	if (isActive[client] && !isLoaded[client]) LoadPlayerState(client);
@@ -200,6 +191,19 @@ public Action Event_PlayerBotReplace(Handle event, char[] name, bool dontBroadca
 	if (IsFakeClient(player)) return;
 
 	if (GetClientTeam(bot) == TEAM_SURVIVORS) TransferPlayerState(player, bot);
+}
+
+// Find an unused player state and have it appropriated by the survivor.
+void FindAndAppropriateUnusedPlayerState(int client)
+{
+	for (int srcClient = 1; srcClient <= MaxClients; srcClient++)
+	{
+		if (isActive[srcClient] && !IsClientConnected(srcClient))
+		{
+			TransferPlayerState(srcClient, client);
+			return;
+		}
+	}
 }
 
 // Transfer a survivor's player state to another survivor.
