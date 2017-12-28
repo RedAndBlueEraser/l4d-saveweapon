@@ -19,10 +19,10 @@
  * Additions and changes to the original mod include correctly restoring
  * pistol(s) magazine ammo, correctly reviving incapacitated survivors inside
  * the safe room, replacing a few hard-coded constants with Cvar queries,
- * giving gas cans, oxygen tanks and propane tanks, and remembering active
- * weapons.
+ * giving gas cans, oxygen tanks and propane tanks, remembering active
+ * weapons, and resurrecting survivors inside the safe room with weapons.
  *
- * Version 20171228 (4.3-alpha2)
+ * Version 20171228 (4.3-alpha3)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -71,6 +71,9 @@ bool isGoingToDie[MAXPLAYERS + 1];     // Whether the next incapacitation will k
 int survivorCharacter[MAXPLAYERS + 1]; // Survivor character.
 char survivorModel[MAXPLAYERS + 1][MAX_ENTITY_MODEL_NAME_LEN]; // Survivor model.
 
+char onRescueSlot0[MAXPLAYERS + 1][MAX_ENTITY_CLASSNAME_LEN];
+int onRescueSlot0ReserveAmmo[MAXPLAYERS + 1];
+
 public Plugin myinfo =
 {
 	name = "L4D Save Weapon",
@@ -88,6 +91,7 @@ public void OnPluginStart()
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_bot_replace", Event_PlayerBotReplace);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace);
+	HookEvent("player_hurt", Event_PlayerHurt);
 }
 
 public void OnMapStart()
@@ -100,7 +104,11 @@ public void OnMapStart()
 	/* Delete player states when starting a new campaign or not in co-operative
 	 * campaign mode.
 	 */
-	if (!arePlayerStatesSavable || !hasMapTransitioned) DeleteAllPlayerStates();
+	if (!arePlayerStatesSavable || !hasMapTransitioned)
+	{
+		DeleteAllPlayerStates();
+		DeleteAllOnRescueSlot0();
+	}
 
 	/* Reset flag in order to indicate any map changes between map start and
 	 * map transition should delete saved player states.
@@ -193,6 +201,47 @@ public Action Event_PlayerBotReplace(Handle event, char[] name, bool dontBroadca
 	if (GetClientTeam(bot) == TEAM_SURVIVORS) TransferPlayerState(player, bot);
 }
 
+// Remember a dead survivor's primary weapon to be resurrected with.
+public Action Event_PlayerHurt(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	DeleteOnRescueSlot0(client);
+	if (client > 0 && GetClientTeam(client) == TEAM_SURVIVORS && GetEventInt(event, "health") <= 0) {
+		int item = GetPlayerWeaponSlot(client, 0);
+		if (item > -1)
+		{
+			char itemClassname[MAX_ENTITY_CLASSNAME_LEN];
+			GetEdictClassname(item, itemClassname, sizeof(itemClassname));
+			if (StrEqual(itemClassname, "weapon_smg"))
+			{
+				strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), itemClassname);
+				onRescueSlot0ReserveAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1") + GetPlayerAmmo(client, item);
+				int maxSlot0ReserveAmmo = FindConVar("ammo_smg_max").IntValue;
+				if (onRescueSlot0ReserveAmmo[client] > maxSlot0ReserveAmmo)
+					onRescueSlot0ReserveAmmo[client] = maxSlot0ReserveAmmo;
+			}
+			else if (StrEqual(itemClassname, "weapon_pumpshotgun"))
+			{
+				strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), itemClassname);
+				onRescueSlot0ReserveAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1") + GetPlayerAmmo(client, item);
+				int maxSlot0ReserveAmmo = FindConVar("ammo_buckshot_max").IntValue;
+				if (onRescueSlot0ReserveAmmo[client] > maxSlot0ReserveAmmo)
+					onRescueSlot0ReserveAmmo[client] = maxSlot0ReserveAmmo;
+			}
+			else if (StrEqual(itemClassname, "weapon_rifle") || StrEqual(itemClassname, "weapon_hunting_rifle"))
+			{
+				strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), "weapon_smg");
+				onRescueSlot0ReserveAmmo[client] = FindConVar("ammo_smg_max").IntValue;
+			}
+			else if (StrEqual(itemClassname, "weapon_autoshotgun"))
+			{
+				strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), "weapon_pumpshotgun");
+				onRescueSlot0ReserveAmmo[client] = FindConVar("ammo_buckshot_max").IntValue;
+			}
+		}
+	}
+}
+
 // Find an unused player state and have it appropriated by the survivor.
 void FindAndAppropriateUnusedPlayerState(int client)
 {
@@ -241,6 +290,11 @@ void SavePlayerState(int client)
 	if (!IsPlayerAlive(client))
 	{
 		health[client] = FindConVar("z_survivor_respawn_health").IntValue;
+		if (onRescueSlot0[client][0] != '\0')
+		{
+			strcopy(slots[client][Slot_0], sizeof(slots[][]), onRescueSlot0[client]);
+			slot0ReserveAmmo[client] = onRescueSlot0ReserveAmmo[client];
+		}
 		strcopy(slots[client][Slot_1], sizeof(slots[][]), "weapon_pistol");
 		return;
 	}
@@ -389,6 +443,19 @@ void DeletePlayerState(int client)
 void DeleteAllPlayerStates()
 {
 	for (int client = 1; client <= MaxClients; client++) DeletePlayerState(client);
+}
+
+// Delete a survivor's remembered primary weapon to be resurrected with.
+void DeleteOnRescueSlot0(int client)
+{
+	onRescueSlot0[client][0] = '\0';
+	onRescueSlot0ReserveAmmo[client] = -1;
+}
+
+// Delete all survivors' remembered primary weapons to be resurrected with.
+void DeleteAllOnRescueSlot0()
+{
+	for (int client = 1; client <= MaxClients; client++) DeleteOnRescueSlot0(client);
 }
 
 /* Give and equip a survivor with an item. */
