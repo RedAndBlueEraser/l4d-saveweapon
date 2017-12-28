@@ -42,9 +42,9 @@
 #define TEAM_SURVIVORS 2
 char SURVIVOR_NAMES[][] = { "Bill", "Zoey", "Francis", "Louis" };
 
-bool isSavable = false;
-bool botsCanAppropriate = true;
-bool isMapTransition = false;
+bool arePlayerStatesSavable = false;
+bool canBotsAppropriate = true;
+bool hasMapTransitioned = false; // Whether a map transition has occurred before a map change.
 
 bool isActive[MAXPLAYERS + 1]; // Whether the player state exists (that is, can be loaded from).
 bool isLoaded[MAXPLAYERS + 1]; // Whether the player state has already been loaded.
@@ -95,17 +95,17 @@ public void OnMapStart()
 	// Player states should be saved only in co-operative campaign mode.
 	char gameMode[MAX_GAME_MODE_NAME_LEN];
 	FindConVar("mp_gamemode").GetString(gameMode, sizeof(gameMode));
-	isSavable = StrEqual(gameMode, "coop", false);
+	arePlayerStatesSavable = StrEqual(gameMode, "coop", false);
 
 	/* Delete player states when starting a new campaign or not in co-operative
 	 * campaign mode.
 	 */
-	if (!isSavable || !isMapTransition) DeleteAllPlayerStates();
+	if (!arePlayerStatesSavable || !hasMapTransitioned) DeleteAllPlayerStates();
 
 	/* Reset flag in order to indicate any map changes between map start and
 	 * map transition should delete saved player states.
 	 */
-	isMapTransition = false;
+	hasMapTransitioned = false;
 }
 
 public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
@@ -114,7 +114,7 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 	 * 1 if already loaded in current round).
 	 */
 	for (int client = 1; client <= MaxClients; client++) isLoaded[client] = false;
-	botsCanAppropriate = true;
+	canBotsAppropriate = true;
 }
 
 public Action Event_MapTransition(Event event, const char[] name, bool dontBroadcast)
@@ -126,7 +126,7 @@ public Action Event_MapTransition(Event event, const char[] name, bool dontBroad
 	/* Set flag in order to indicate that the next map change in map start
 	 * should not delete saved player states.
 	 */
-	isMapTransition = true;
+	hasMapTransitioned = true;
 }
 
 public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -139,17 +139,18 @@ public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadca
 public Action Timer_LoadPlayerState(Handle handle, int client)
 {
 	// If the client isn't connected, or isn't a survivor, do nothing.
-	if (!IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVORS || !isSavable) return;
+	if (!arePlayerStatesSavable || !IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVORS)
+		return;
 
 	// Allow bots to appropriate another player state.
-	if (botsCanAppropriate) CreateTimer(10.0, Timer_StopAppropriate, TIMER_FLAG_NO_MAPCHANGE);
+	if (canBotsAppropriate) CreateTimer(10.0, Timer_StopBotsAppropriate, TIMER_FLAG_NO_MAPCHANGE);
 
 	/* If a player state for a bot doesn't exist, have the bot appropriate and
 	 * load a state that has been abandoned (for example, from players
 	 * disconnecting between map changes, bots being autokicked at the end of
 	 * the map, etc).
 	 */
-	if (!isLoaded[client] && !isActive[client] && IsFakeClient(client) && botsCanAppropriate)
+	if (!isLoaded[client] && !isActive[client] && IsFakeClient(client) && canBotsAppropriate)
 	{
 		for (int client2 = 1; client2 <= MaxClients; client2++)
 		{
@@ -168,9 +169,9 @@ public Action Timer_LoadPlayerState(Handle handle, int client)
 /* Disable bot appropriation to prevent idle bots from loading a different
  * player state.
  */
-public Action Timer_StopAppropriate(Handle handle, int client)
+public Action Timer_StopBotsAppropriate(Handle handle, int client)
 {
-	botsCanAppropriate = false;
+	canBotsAppropriate = false;
 }
 
 // Transfer a bot's player state to the replacing player.
