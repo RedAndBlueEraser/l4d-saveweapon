@@ -241,6 +241,7 @@ void SavePlayerState(int client)
 	if (!IsPlayerAlive(client))
 	{
 		health[client] = FindConVar("z_survivor_respawn_health").IntValue;
+		strcopy(slots[client][Slot_1], sizeof(slots[][]), "weapon_pistol");
 		return;
 	}
 
@@ -320,11 +321,16 @@ void LoadPlayerState(int client)
 		if (slots[client][slot][0] != '\0')
 			GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
 	// Load slot 1 (secondary weapon, sidearm).
-	int item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), "weapon_pistol");
-	if (item > -1)
+	int item;
+	if (slots[client][Slot_0][0] != '\0')
 	{
-		SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
-		SetEntProp(item, Prop_Send, "m_hasDualWeapons", slot1IsDualWield[client] ? 1 : 0);
+		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slots[client][Slot_1]);
+		if (item > -1)
+		{
+			if (slot1MagazineAmmo[client] > -1)
+				SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
+			SetEntProp(item, Prop_Send, "m_hasDualWeapons", slot1IsDualWield[client] ? 1 : 0);
+		}
 	}
 	// Load slot 0 (primary weapon).
 	if (slots[client][Slot_0][0] != '\0')
@@ -332,8 +338,10 @@ void LoadPlayerState(int client)
 		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_0), slots[client][Slot_0]);
 		if (item > -1)
 		{
-			SetEntProp(item, Prop_Send, "m_iClip1", slot0MagazineAmmo[client]);
-			SetPlayerAmmo(client, item, slot0ReserveAmmo[client]);
+			if (slot0MagazineAmmo[client] > -1)
+				SetEntProp(item, Prop_Send, "m_iClip1", slot0MagazineAmmo[client]);
+			if (slot0ReserveAmmo[client] > -1)
+				SetPlayerAmmo(client, item, slot0ReserveAmmo[client]);
 		}
 	}
 	/* Load slot 5 (carried gas can, oxygen tank, or propane tank). Loaded last
@@ -363,12 +371,12 @@ void DeletePlayerState(int client)
 	isLoaded[client] = false;
 	for (int slot = view_as<int>(Slot_0); slot <= view_as<int>(Slot_5); slot++)
 		slots[client][slot][0] = '\0';
-	slot0MagazineAmmo[client] = 0;
-	slot0ReserveAmmo[client] = 0;
-	slot1MagazineAmmo[client] = 0;
+	slot0MagazineAmmo[client] = -1;
+	slot0ReserveAmmo[client] = -1;
+	slot1MagazineAmmo[client] = -1;
 	slot1IsDualWield[client] = false;
 	activeSlot[client] = -1;
-	health[client] = 100;
+	health[client] = 0;
 	healthTemp[client] = 0.0;
 	healthTempTime[client] = 0.0;
 	reviveCount[client] = 0;
