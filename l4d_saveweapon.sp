@@ -22,7 +22,7 @@
  * giving gas cans, oxygen tanks and propane tanks, and remembering active
  * weapons.
  *
- * Version 20171224 (4.3-alpha2)
+ * Version 20171228 (4.3-alpha2)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
