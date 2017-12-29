@@ -376,7 +376,7 @@ void LoadPlayerState(int client)
 			GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
 	// Load slot 1 (secondary weapon, sidearm).
 	int item;
-	if (slots[client][Slot_0][0] != '\0')
+	if (slots[client][Slot_1][0] != '\0')
 	{
 		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slots[client][Slot_1]);
 		if (item > -1)
