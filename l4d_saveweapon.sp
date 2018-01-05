@@ -408,8 +408,8 @@ int GiveIfNotHasPlayerItemSlot(int client, int slot, const char[] item)
 		char existingItemClassname[MAX_ENTITY_CLASSNAME_LEN];
 		GetEdictClassname(existingItem, existingItemClassname, sizeof(existingItemClassname));
 		if (StrEqual(existingItemClassname, item)) return existingItem;
-		else if (slot != view_as<int>(Slot_5)) RemovePlayerItem2(client, existingItem);
-		else RemoveEdict(existingItem);
+		else if (slot == view_as<int>(Slot_5)) RemoveEdict(existingItem);
+		else RemovePlayerItem2(client, existingItem);
 	}
 	return GivePlayerItem2(client, item);
 }
