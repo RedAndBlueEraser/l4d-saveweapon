@@ -288,7 +288,7 @@ void SavePlayerState(int client)
 	{
 		health[client] = GetClientHealth(client);
 		healthTemp[client] = GetEntPropFloat(client, Prop_Send, "m_healthBuffer");
-		healthTempTime[client] = GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime");
+		healthTempTime[client] = GetPlayerHealthTempTime(client);
 		reviveCount[client] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
 		isGoingToDie[client] = GetEntProp(client, Prop_Send, "m_isGoingToDie") != 0;
 	}
@@ -351,7 +351,7 @@ void LoadPlayerState(int client)
 	// Load health.
 	SetEntProp(client, Prop_Send, "m_iHealth", health[client]);
 	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", healthTemp[client]);
-	SetEntPropFloat(client, Prop_Send, "m_healthBufferTime", GetGameTime() - healthTempTime[client]);
+	SetPlayerHealthTempTime(client, healthTempTime[client]);
 	SetEntProp(client, Prop_Send, "m_currentReviveCount", reviveCount[client]);
 	SetEntProp(client, Prop_Send, "m_isGoingToDie", isGoingToDie[client] ? 1 : 0);
 }
@@ -424,4 +424,16 @@ int GetPlayerAmmo(int client, int item)
 void SetPlayerAmmo(int client, int item, int amount)
 {
 	SetEntProp(client, Prop_Send, "m_iAmmo", amount, _, GetEntProp(item, Prop_Send, "m_iPrimaryAmmoType"));
+}
+
+// Get a survivor's temporary health time relative to the game time.
+float GetPlayerHealthTempTime(int client)
+{
+	return GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime");
+}
+
+// Set a survivor's temporary health time relative to the game time.
+void SetPlayerHealthTempTime(int client, float time)
+{
+	SetEntPropFloat(client, Prop_Send, "m_healthBufferTime", GetGameTime() - time);
 }
