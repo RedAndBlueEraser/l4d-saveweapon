@@ -323,8 +323,14 @@ void LoadPlayerState(int client)
 	int item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), "weapon_pistol");
 	if (item > -1)
 	{
+		if (slot1IsDualWield[client] && !GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
+		{
+			int commandFlags = GetCommandFlags("give");
+			SetCommandFlags("give", commandFlags & ~FCVAR_CHEAT);
+			FakeClientCommand(client, "give pistol");
+			SetCommandFlags("give", commandFlags);
+		}
 		SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
-		SetEntProp(item, Prop_Send, "m_hasDualWeapons", slot1IsDualWield[client] ? 1 : 0);
 	}
 	// Load slot 0 (primary weapon).
 	if (slots[client][Slot_0][0] != '\0')
