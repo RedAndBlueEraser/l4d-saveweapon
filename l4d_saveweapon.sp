@@ -22,7 +22,7 @@
  * giving gas cans, oxygen tanks and propane tanks, and remembering active
  * weapons.
  *
- * Version 20171228 (4.3-alpha2)
+ * Version 20180107 (4.3-alpha2)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -342,11 +342,7 @@ void LoadPlayerState(int client)
 	if (slots[client][Slot_5][0] != '\0')
 		GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_5), slots[client][Slot_5]);
 	// Set active weapon, so it's the one yielded.
-	if (activeSlot[client] > -1)
-	{
-		item = GetPlayerWeaponSlot(client, activeSlot[client]);
-		if (item > -1) SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", item);
-	}
+	if (activeSlot[client] > -1) ClientCommand(client, "slot%d", activeSlot[client] + 1);
 
 	// Load health.
 	SetEntProp(client, Prop_Send, "m_iHealth", health[client]);
