@@ -333,7 +333,8 @@ void LoadPlayerState(int client)
 				FakeClientCommand(client, "give pistol");
 				SetCommandFlags("give", commandFlags);
 			}
-			SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
+			if (slot1MagazineAmmo[client] > -1)
+				SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
 		}
 	}
 	// Load slot 0 (primary weapon).
@@ -342,8 +343,10 @@ void LoadPlayerState(int client)
 		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_0), slots[client][Slot_0]);
 		if (item > -1)
 		{
-			SetEntProp(item, Prop_Send, "m_iClip1", slot0MagazineAmmo[client]);
-			SetPlayerAmmo(client, item, slot0ReserveAmmo[client]);
+			if (slot0MagazineAmmo[client] > -1)
+				SetEntProp(item, Prop_Send, "m_iClip1", slot0MagazineAmmo[client]);
+			if (slot0ReserveAmmo[client] > -1)
+				SetPlayerAmmo(client, item, slot0ReserveAmmo[client]);
 		}
 	}
 	/* Load slot 5 (carried gas can, oxygen tank, or propane tank). Loaded last
@@ -369,9 +372,9 @@ void DeletePlayerState(int client)
 	isLoaded[client] = false;
 	for (int slot = view_as<int>(Slot_0); slot <= view_as<int>(Slot_5); slot++)
 		slots[client][slot][0] = '\0';
-	slot0MagazineAmmo[client] = 0;
-	slot0ReserveAmmo[client] = 0;
-	slot1MagazineAmmo[client] = 0;
+	slot0MagazineAmmo[client] = -1;
+	slot0ReserveAmmo[client] = -1;
+	slot1MagazineAmmo[client] = -1;
 	slot1IsDualWield[client] = false;
 	activeSlot[client] = -1;
 	health[client] = 100;
