@@ -22,7 +22,7 @@
  * giving gas cans, oxygen tanks and propane tanks, and remembering active
  * weapons.
  *
- * Version 20180107 (4.3-alpha2)
+ * Version 20180108 (4.3-alpha2)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -355,7 +355,7 @@ void LoadPlayerState(int client)
 	if (slots[client][Slot_5][0] != '\0')
 		GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_5), slots[client][Slot_5]);
 	// Set active weapon, so it's the one yielded.
-	if (activeSlot[client] > -1) ClientCommand(client, "slot%d", activeSlot[client] + 1);
+	if (activeSlot[client] > -1) SetPlayerActiveSlot(client, activeSlot[client]);
 
 	// Load health.
 	SetEntProp(client, Prop_Send, "m_iHealth", health[client]);
@@ -433,6 +433,20 @@ int GetPlayerAmmo(int client, int item)
 void SetPlayerAmmo(int client, int item, int amount)
 {
 	SetEntProp(client, Prop_Send, "m_iAmmo", amount, _, GetEntProp(item, Prop_Send, "m_iPrimaryAmmoType"));
+}
+
+// Set the survivor's active weapon by slot.
+void SetPlayerActiveSlot(int client, int slot)
+{
+	if (IsFakeClient(client))
+	{
+		int item = GetPlayerWeaponSlot(client, slot);
+		if (item > -1) SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", item);
+	}
+	else
+	{
+		ClientCommand(client, "slot%d", slot + 1);
+	}
 }
 
 // Get a survivor's temporary health time relative to the game time.
