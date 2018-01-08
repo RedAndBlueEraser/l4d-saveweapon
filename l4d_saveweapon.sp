@@ -22,7 +22,7 @@
  * giving gas cans, oxygen tanks and propane tanks, remembering active
  * weapons, and resurrecting survivors inside the safe room with weapons.
  *
- * Version 20171228 (4.3-alpha3)
+ * Version 20180107 (4.3-alpha2)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -344,7 +344,7 @@ void SavePlayerState(int client)
 	{
 		health[client] = GetClientHealth(client);
 		healthTemp[client] = GetEntPropFloat(client, Prop_Send, "m_healthBuffer");
-		healthTempTime[client] = GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime");
+		healthTempTime[client] = GetPlayerHealthTempTime(client);
 		reviveCount[client] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
 		isGoingToDie[client] = GetEntProp(client, Prop_Send, "m_isGoingToDie") != 0;
 	}
@@ -382,9 +382,15 @@ void LoadPlayerState(int client)
 		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slots[client][Slot_1]);
 		if (item > -1)
 		{
+			if (slot1IsDualWield[client] && !GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
+			{
+				int commandFlags = GetCommandFlags("give");
+				SetCommandFlags("give", commandFlags & ~FCVAR_CHEAT);
+				FakeClientCommand(client, "give pistol");
+				SetCommandFlags("give", commandFlags);
+			}
 			if (slot1MagazineAmmo[client] > -1)
 				SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
-			SetEntProp(item, Prop_Send, "m_hasDualWeapons", slot1IsDualWield[client] ? 1 : 0);
 		}
 	}
 	// Load slot 0 (primary weapon).
@@ -405,16 +411,12 @@ void LoadPlayerState(int client)
 	if (slots[client][Slot_5][0] != '\0')
 		GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_5), slots[client][Slot_5]);
 	// Set active weapon, so it's the one yielded.
-	if (activeSlot[client] > -1)
-	{
-		item = GetPlayerWeaponSlot(client, activeSlot[client]);
-		if (item > -1) SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", item);
-	}
+	if (activeSlot[client] > -1) ClientCommand(client, "slot%d", activeSlot[client] + 1);
 
 	// Load health.
 	SetEntProp(client, Prop_Send, "m_iHealth", health[client]);
 	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", healthTemp[client]);
-	SetEntPropFloat(client, Prop_Send, "m_healthBufferTime", GetGameTime() - healthTempTime[client]);
+	SetPlayerHealthTempTime(client, healthTempTime[client]);
 	SetEntProp(client, Prop_Send, "m_currentReviveCount", reviveCount[client]);
 	SetEntProp(client, Prop_Send, "m_isGoingToDie", isGoingToDie[client] ? 1 : 0);
 }
@@ -484,8 +486,8 @@ int GiveIfNotHasPlayerItemSlot(int client, int slot, const char[] item)
 		char existingItemClassname[MAX_ENTITY_CLASSNAME_LEN];
 		GetEdictClassname(existingItem, existingItemClassname, sizeof(existingItemClassname));
 		if (StrEqual(existingItemClassname, item)) return existingItem;
-		else if (slot != view_as<int>(Slot_5)) RemovePlayerItem2(client, existingItem);
-		else RemoveEdict(existingItem);
+		else if (slot == view_as<int>(Slot_5)) RemoveEdict(existingItem);
+		else RemovePlayerItem2(client, existingItem);
 	}
 	return GivePlayerItem2(client, item);
 }
@@ -500,4 +502,16 @@ int GetPlayerAmmo(int client, int item)
 void SetPlayerAmmo(int client, int item, int amount)
 {
 	SetEntProp(client, Prop_Send, "m_iAmmo", amount, _, GetEntProp(item, Prop_Send, "m_iPrimaryAmmoType"));
+}
+
+// Get a survivor's temporary health time relative to the game time.
+float GetPlayerHealthTempTime(int client)
+{
+	return GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime");
+}
+
+// Set a survivor's temporary health time relative to the game time.
+void SetPlayerHealthTempTime(int client, float time)
+{
+	SetEntPropFloat(client, Prop_Send, "m_healthBufferTime", GetGameTime() - time);
 }
