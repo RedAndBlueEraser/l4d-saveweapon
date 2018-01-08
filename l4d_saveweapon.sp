@@ -377,7 +377,7 @@ void DeletePlayerState(int client)
 	slot1MagazineAmmo[client] = -1;
 	slot1IsDualWield[client] = false;
 	activeSlot[client] = -1;
-	health[client] = 100;
+	health[client] = 0;
 	healthTemp[client] = 0.0;
 	healthTempTime[client] = 0.0;
 	reviveCount[client] = 0;
