@@ -316,7 +316,6 @@ void LoadPlayerState(int client)
 	if (!IsPlayerAlive(client)) return;
 
 	// Load equipment.
-	int item;
 	for (int slot = view_as<int>(Slot_2); slot <= view_as<int>(Slot_4); slot++)
 	{
 		if (slots[client][slot][0] != '\0')
@@ -325,14 +324,14 @@ void LoadPlayerState(int client)
 		}
 		else
 		{
-			item = GetPlayerWeaponSlot(client, slot);
+			int item = GetPlayerWeaponSlot(client, slot);
 			if (item > -1) RemovePlayerItem2(client, item);
 		}
 	}
 	// Load slot 1 (secondary weapon, sidearm).
 	if (slots[client][Slot_1][0] != '\0')
 	{
-		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slots[client][Slot_1]);
+		int item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slots[client][Slot_1]);
 		if (item > -1)
 		{
 			if (slot1IsDualWield[client] && !GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
@@ -348,13 +347,13 @@ void LoadPlayerState(int client)
 	}
 	else
 	{
-		item = GetPlayerWeaponSlot(client, view_as<int>(Slot_1));
+		int item = GetPlayerWeaponSlot(client, view_as<int>(Slot_1));
 		if (item > -1) RemovePlayerItem2(client, item);
 	}
 	// Load slot 0 (primary weapon).
 	if (slots[client][Slot_0][0] != '\0')
 	{
-		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_0), slots[client][Slot_0]);
+		int item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_0), slots[client][Slot_0]);
 		if (item > -1)
 		{
 			if (slot0MagazineAmmo[client] > -1)
@@ -365,7 +364,7 @@ void LoadPlayerState(int client)
 	}
 	else
 	{
-		item = GetPlayerWeaponSlot(client, view_as<int>(Slot_0));
+		int item = GetPlayerWeaponSlot(client, view_as<int>(Slot_0));
 		if (item > -1) RemovePlayerItem2(client, item);
 	}
 	/* Load slot 5 (carried gas can, oxygen tank, or propane tank). Loaded last
@@ -377,7 +376,7 @@ void LoadPlayerState(int client)
 	}
 	else
 	{
-		item = GetPlayerWeaponSlot(client, view_as<int>(Slot_5));
+		int item = GetPlayerWeaponSlot(client, view_as<int>(Slot_5));
 		if (item > -1) RemoveEdict(item);
 	}
 	// Set active weapon, so it's the one yielded.
