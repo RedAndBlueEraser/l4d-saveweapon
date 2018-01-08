@@ -316,11 +316,20 @@ void LoadPlayerState(int client)
 	if (!IsPlayerAlive(client)) return;
 
 	// Load equipment.
-	for (int slot = view_as<int>(Slot_2); slot <= view_as<int>(Slot_4); slot++)
-		if (slots[client][slot][0] != '\0')
-			GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
-	// Load slot 1 (secondary weapon, sidearm).
 	int item;
+	for (int slot = view_as<int>(Slot_2); slot <= view_as<int>(Slot_4); slot++)
+	{
+		if (slots[client][slot][0] != '\0')
+		{
+			GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
+		}
+		else
+		{
+			item = GetPlayerWeaponSlot(client, slot);
+			if (item > -1) RemovePlayerItem2(client, item);
+		}
+	}
+	// Load slot 1 (secondary weapon, sidearm).
 	if (slots[client][Slot_1][0] != '\0')
 	{
 		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slots[client][Slot_1]);
@@ -337,6 +346,11 @@ void LoadPlayerState(int client)
 				SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
 		}
 	}
+	else
+	{
+		item = GetPlayerWeaponSlot(client, view_as<int>(Slot_1));
+		if (item > -1) RemovePlayerItem2(client, item);
+	}
 	// Load slot 0 (primary weapon).
 	if (slots[client][Slot_0][0] != '\0')
 	{
@@ -349,11 +363,23 @@ void LoadPlayerState(int client)
 				SetPlayerAmmo(client, item, slot0ReserveAmmo[client]);
 		}
 	}
+	else
+	{
+		item = GetPlayerWeaponSlot(client, view_as<int>(Slot_0));
+		if (item > -1) RemovePlayerItem2(client, item);
+	}
 	/* Load slot 5 (carried gas can, oxygen tank, or propane tank). Loaded last
 	 * so it's the one yielded.
 	 */
 	if (slots[client][Slot_5][0] != '\0')
+	{
 		GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_5), slots[client][Slot_5]);
+	}
+	else
+	{
+		item = GetPlayerWeaponSlot(client, view_as<int>(Slot_5));
+		if (item > -1) RemoveEdict(item);
+	}
 	// Set active weapon, so it's the one yielded.
 	if (activeSlot[client] > -1) SetPlayerActiveSlot(client, activeSlot[client]);
 
