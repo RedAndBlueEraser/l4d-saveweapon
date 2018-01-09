@@ -320,14 +320,9 @@ void LoadPlayerState(int client)
 	for (int slot = view_as<int>(Slot_2); slot <= view_as<int>(Slot_4); slot++)
 	{
 		if (slots[client][slot][0] != '\0')
-		{
 			GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
-		}
 		else
-		{
-			item = GetPlayerWeaponSlot(client, slot);
-			if (item > -1) RemovePlayerItem2(client, item);
-		}
+			RemovePlayerItemSlot(client, slot);
 	}
 	// Load slot 1 (secondary weapon, sidearm).
 	if (slots[client][Slot_1][0] != '\0')
@@ -374,8 +369,7 @@ void LoadPlayerState(int client)
 	}
 	else
 	{
-		item = GetPlayerWeaponSlot(client, view_as<int>(Slot_0));
-		if (item > -1) RemovePlayerItem2(client, item);
+		RemovePlayerItemSlot(client, view_as<int>(Slot_0));
 	}
 	/* Load slot 5 (carried gas can, oxygen tank, or propane tank). Loaded last
 	 * so it's the one yielded.
@@ -456,6 +450,13 @@ int GiveIfNotHasPlayerItemSlot(int client, int slot, const char[] item)
 		else RemovePlayerItem2(client, existingItem);
 	}
 	return GivePlayerItem2(client, item);
+}
+
+// Remove the item in the specified slot from a survivor.
+void RemovePlayerItemSlot(int client, int slot)
+{
+	int item = GetPlayerWeaponSlot(client, slot);
+	if (item > -1) RemovePlayerItem2(client, item);
 }
 
 // Get the reserve ammo carried for an item by a survivor.
