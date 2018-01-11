@@ -22,7 +22,7 @@
  * giving gas cans, oxygen tanks and propane tanks, and remembering active
  * weapons.
  *
- * Version 20180108 (4.3-alpha2)
+ * Version 20180110 (4.3-alpha2)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -39,6 +39,7 @@
 #define MAX_ENTITY_CLASSNAME_LEN 24
 #define MAX_ENTITY_MODEL_NAME_LEN 40
 
+#define SLOT_1_DEFAULT "weapon_pistol" // TODO
 #define TEAM_SURVIVORS 2
 char SURVIVOR_NAMES[][] = { "Bill", "Zoey", "Francis", "Louis" };
 
@@ -325,10 +326,10 @@ void LoadPlayerState(int client)
 			RemovePlayerItemSlot(client, slot);
 	}
 	// Load slot 1 (secondary weapon, sidearm).
+	char slot1[MAX_ENTITY_CLASSNAME_LEN] = SLOT_1_DEFAULT;
 	if (slots[client][Slot_1][0] != '\0')
-		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slots[client][Slot_1]);
-	else
-		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), "weapon_pistol");
+		strcopy(slot1, sizeof(slot1), slots[client][Slot_1]);
+	item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slot1);
 	if (item > -1)
 	{
 		if (slot1IsDualWield[client])
@@ -337,20 +338,14 @@ void LoadPlayerState(int client)
 			{
 				int commandFlags = GetCommandFlags("give");
 				SetCommandFlags("give", commandFlags & ~FCVAR_CHEAT);
-				FakeClientCommand(client, "give pistol");
+				FakeClientCommand(client, "give %s", slot1);
 				SetCommandFlags("give", commandFlags);
 			}
 		}
-		else
+		else if (GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
 		{
-			if (GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
-			{
-				RemovePlayerItem2(client, item);
-				if (slots[client][Slot_1][0] != '\0')
-					GivePlayerItem2(client, slots[client][Slot_1]);
-				else
-					GivePlayerItem2(client, "weapon_pistol");
-			}
+			RemovePlayerItem2(client, item);
+			GivePlayerItem2(client, slot1);
 		}
 		if (slot1MagazineAmmo[client] > -1)
 			SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
