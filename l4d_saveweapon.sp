@@ -39,7 +39,7 @@
 #define MAX_ENTITY_CLASSNAME_LEN 24
 #define MAX_ENTITY_MODEL_NAME_LEN 40
 
-#define SLOT_1_DEFAULT "weapon_pistol" // TODO
+#define SLOT_1_DEFAULT "weapon_pistol"
 #define TEAM_SURVIVORS 2
 char SURVIVOR_NAMES[][] = { "Bill", "Zoey", "Francis", "Louis" };
 
