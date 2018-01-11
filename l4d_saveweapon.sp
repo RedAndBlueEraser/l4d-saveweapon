@@ -22,7 +22,7 @@
  * giving gas cans, oxygen tanks and propane tanks, remembering active
  * weapons, and resurrecting survivors inside the safe room with weapons.
  *
- * Version 20180107 (4.3-alpha2)
+ * Version 20180110 (4.3-alpha2)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -39,6 +39,7 @@
 #define MAX_ENTITY_CLASSNAME_LEN 24
 #define MAX_ENTITY_MODEL_NAME_LEN 40
 
+#define SLOT_1_DEFAULT "weapon_pistol"
 #define TEAM_SURVIVORS 2
 char SURVIVOR_NAMES[][] = { "Bill", "Zoey", "Francis", "Louis" };
 
@@ -372,26 +373,38 @@ void LoadPlayerState(int client)
 	if (!IsPlayerAlive(client)) return;
 
 	// Load equipment.
+	int item;
 	for (int slot = view_as<int>(Slot_2); slot <= view_as<int>(Slot_4); slot++)
+	{
 		if (slots[client][slot][0] != '\0')
 			GiveIfNotHasPlayerItemSlot(client, slot, slots[client][slot]);
+		else
+			RemovePlayerItemSlot(client, slot);
+	}
 	// Load slot 1 (secondary weapon, sidearm).
-	int item;
+	char slot1[MAX_ENTITY_CLASSNAME_LEN] = SLOT_1_DEFAULT;
 	if (slots[client][Slot_1][0] != '\0')
+		strcopy(slot1, sizeof(slot1), slots[client][Slot_1]);
+	item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slot1);
+	if (item > -1)
 	{
-		item = GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_1), slots[client][Slot_1]);
-		if (item > -1)
+		if (slot1IsDualWield[client])
 		{
-			if (slot1IsDualWield[client] && !GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
+			if (!GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
 			{
 				int commandFlags = GetCommandFlags("give");
 				SetCommandFlags("give", commandFlags & ~FCVAR_CHEAT);
-				FakeClientCommand(client, "give pistol");
+				FakeClientCommand(client, "give %s", slot1);
 				SetCommandFlags("give", commandFlags);
 			}
-			if (slot1MagazineAmmo[client] > -1)
-				SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
 		}
+		else if (GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
+		{
+			RemovePlayerItem2(client, item);
+			GivePlayerItem2(client, slot1);
+		}
+		if (slot1MagazineAmmo[client] > -1)
+			SetEntProp(item, Prop_Send, "m_iClip1", slot1MagazineAmmo[client]);
 	}
 	// Load slot 0 (primary weapon).
 	if (slots[client][Slot_0][0] != '\0')
@@ -405,13 +418,24 @@ void LoadPlayerState(int client)
 				SetPlayerAmmo(client, item, slot0ReserveAmmo[client]);
 		}
 	}
+	else
+	{
+		RemovePlayerItemSlot(client, view_as<int>(Slot_0));
+	}
 	/* Load slot 5 (carried gas can, oxygen tank, or propane tank). Loaded last
 	 * so it's the one yielded.
 	 */
 	if (slots[client][Slot_5][0] != '\0')
+	{
 		GiveIfNotHasPlayerItemSlot(client, view_as<int>(Slot_5), slots[client][Slot_5]);
+	}
+	else
+	{
+		item = GetPlayerWeaponSlot(client, view_as<int>(Slot_5));
+		if (item > -1) RemoveEdict(item);
+	}
 	// Set active weapon, so it's the one yielded.
-	if (activeSlot[client] > -1) ClientCommand(client, "slot%d", activeSlot[client] + 1);
+	if (activeSlot[client] > -1) SetPlayerActiveSlot(client, activeSlot[client]);
 
 	// Load health.
 	SetEntProp(client, Prop_Send, "m_iHealth", health[client]);
@@ -492,6 +516,13 @@ int GiveIfNotHasPlayerItemSlot(int client, int slot, const char[] item)
 	return GivePlayerItem2(client, item);
 }
 
+// Remove the item in the specified slot from a survivor.
+void RemovePlayerItemSlot(int client, int slot)
+{
+	int item = GetPlayerWeaponSlot(client, slot);
+	if (item > -1) RemovePlayerItem2(client, item);
+}
+
 // Get the reserve ammo carried for an item by a survivor.
 int GetPlayerAmmo(int client, int item)
 {
@@ -502,6 +533,20 @@ int GetPlayerAmmo(int client, int item)
 void SetPlayerAmmo(int client, int item, int amount)
 {
 	SetEntProp(client, Prop_Send, "m_iAmmo", amount, _, GetEntProp(item, Prop_Send, "m_iPrimaryAmmoType"));
+}
+
+// Set the survivor's active weapon by slot.
+void SetPlayerActiveSlot(int client, int slot)
+{
+	if (IsFakeClient(client))
+	{
+		int item = GetPlayerWeaponSlot(client, slot);
+		if (item > -1) SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", item);
+	}
+	else
+	{
+		ClientCommand(client, "slot%d", slot + 1);
+	}
 }
 
 // Get a survivor's temporary health time relative to the game time.
