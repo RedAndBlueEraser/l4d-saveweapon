@@ -22,7 +22,7 @@
  * giving gas cans, oxygen tanks and propane tanks, remembering active
  * weapons, and resurrecting survivors inside the safe room with weapons.
  *
- * Version 20180110 (4.3-alpha2)
+ * Version 20180112 (4.3-alpha3)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -105,11 +105,8 @@ public void OnMapStart()
 	/* Delete player states when starting a new campaign or not in co-operative
 	 * campaign mode.
 	 */
-	if (!arePlayerStatesSavable || !hasMapTransitioned)
-	{
-		DeleteAllPlayerStates();
-		DeleteAllOnRescueSlot0();
-	}
+	if (!arePlayerStatesSavable || !hasMapTransitioned) DeleteAllPlayerStates();
+	DeleteAllOnRescueSlot0();
 
 	/* Reset flag in order to indicate any map changes between map start and
 	 * map transition should delete saved player states.
