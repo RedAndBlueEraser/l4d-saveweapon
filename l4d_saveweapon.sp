@@ -203,38 +203,54 @@ public Action Event_PlayerBotReplace(Handle event, char[] name, bool dontBroadca
 public Action Event_PlayerHurt(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	DeleteOnRescueSlot0(client);
-	if (client > 0 && GetClientTeam(client) == TEAM_SURVIVORS && GetEventInt(event, "health") <= 0) {
-		int item = GetPlayerWeaponSlot(client, 0);
-		if (item > -1)
+	if (client != 0 && GetClientTeam(client) == TEAM_SURVIVORS && GetEventInt(event, "health") <= 0)
+	{
+		DeleteOnRescueSlot0(client);
+		int areSurvivorsRespawnWithGuns = FindConVar("survivor_respawn_with_guns").IntValue;
+		if (areSurvivorsRespawnWithGuns)
 		{
-			char itemClassname[MAX_ENTITY_CLASSNAME_LEN];
-			GetEdictClassname(item, itemClassname, sizeof(itemClassname));
-			if (StrEqual(itemClassname, "weapon_smg"))
+			int item = GetPlayerWeaponSlot(client, 0);
+			if (item > -1)
 			{
-				strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), itemClassname);
-				onRescueSlot0ReserveAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1") + GetPlayerAmmo(client, item);
-				int maxSlot0ReserveAmmo = FindConVar("ammo_smg_max").IntValue;
-				if (onRescueSlot0ReserveAmmo[client] > maxSlot0ReserveAmmo)
-					onRescueSlot0ReserveAmmo[client] = maxSlot0ReserveAmmo;
-			}
-			else if (StrEqual(itemClassname, "weapon_pumpshotgun"))
-			{
-				strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), itemClassname);
-				onRescueSlot0ReserveAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1") + GetPlayerAmmo(client, item);
-				int maxSlot0ReserveAmmo = FindConVar("ammo_buckshot_max").IntValue;
-				if (onRescueSlot0ReserveAmmo[client] > maxSlot0ReserveAmmo)
-					onRescueSlot0ReserveAmmo[client] = maxSlot0ReserveAmmo;
-			}
-			else if (StrEqual(itemClassname, "weapon_rifle") || StrEqual(itemClassname, "weapon_hunting_rifle"))
-			{
-				strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), "weapon_smg");
-				onRescueSlot0ReserveAmmo[client] = FindConVar("ammo_smg_max").IntValue;
-			}
-			else if (StrEqual(itemClassname, "weapon_autoshotgun"))
-			{
-				strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), "weapon_pumpshotgun");
-				onRescueSlot0ReserveAmmo[client] = FindConVar("ammo_buckshot_max").IntValue;
+				char itemClassname[MAX_ENTITY_CLASSNAME_LEN];
+				GetEdictClassname(item, itemClassname, sizeof(itemClassname));
+				if (StrEqual(itemClassname, "weapon_smg"))
+				{
+					strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), itemClassname);
+					onRescueSlot0ReserveAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1") + GetPlayerAmmo(client, item);
+					int maxSlot0ReserveAmmo = FindConVar("ammo_smg_max").IntValue;
+					if (onRescueSlot0ReserveAmmo[client] > maxSlot0ReserveAmmo)
+						onRescueSlot0ReserveAmmo[client] = maxSlot0ReserveAmmo;
+				}
+				else if (StrEqual(itemClassname, "weapon_pumpshotgun"))
+				{
+					strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), itemClassname);
+					onRescueSlot0ReserveAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1") + GetPlayerAmmo(client, item);
+					int maxSlot0ReserveAmmo = FindConVar("ammo_buckshot_max").IntValue;
+					if (onRescueSlot0ReserveAmmo[client] > maxSlot0ReserveAmmo)
+						onRescueSlot0ReserveAmmo[client] = maxSlot0ReserveAmmo;
+				}
+				else if (areSurvivorsRespawnWithGuns == 2)
+				{
+					strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), itemClassname);
+					onRescueSlot0ReserveAmmo[client] = GetEntProp(item, Prop_Send, "m_iClip1") + GetPlayerAmmo(client, item);
+					int maxSlot0ReserveAmmo = 0;
+					if (StrEqual(itemClassname, "weapon_rifle")) maxSlot0ReserveAmmo = FindConVar("ammo_assaultrifle_max").IntValue;
+					else if (StrEqual(itemClassname, "weapon_hunting_rifle")) maxSlot0ReserveAmmo = FindConVar("ammo_huntingrifle_max").IntValue;
+					else if (StrEqual(itemClassname, "weapon_autoshotgun")) maxSlot0ReserveAmmo = FindConVar("ammo_buckshot_max").IntValue;
+					if (onRescueSlot0ReserveAmmo[client] > maxSlot0ReserveAmmo)
+						onRescueSlot0ReserveAmmo[client] = maxSlot0ReserveAmmo;
+				}
+				else if (StrEqual(itemClassname, "weapon_rifle") || StrEqual(itemClassname, "weapon_hunting_rifle"))
+				{
+					strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), "weapon_smg");
+					onRescueSlot0ReserveAmmo[client] = FindConVar("ammo_smg_max").IntValue;
+				}
+				else if (StrEqual(itemClassname, "weapon_autoshotgun"))
+				{
+					strcopy(onRescueSlot0[client], sizeof(onRescueSlot0[]), "weapon_pumpshotgun");
+					onRescueSlot0ReserveAmmo[client] = FindConVar("ammo_buckshot_max").IntValue;
+				}
 			}
 		}
 	}
