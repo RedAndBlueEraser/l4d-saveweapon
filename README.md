@@ -24,7 +24,7 @@ The plugin automatically saves and loads player states during chapter map transi
 - `l4d_saveweapon`: L4D Save Weapon version
 
 ## History
-### Added or modified features from Merudo’s original plugin
+### Added or modified features to Merudo’s original plugin
 - Saving and loading gas cans, oxygen tanks and propane tanks
 - Remembering active weapons
 - Giving primary weapons to resurrected survivors after chapter map transitions (depends on `survivor_respawn_with_guns` ConVar)
