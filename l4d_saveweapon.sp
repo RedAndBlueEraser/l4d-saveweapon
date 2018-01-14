@@ -22,7 +22,7 @@
  * giving gas cans, oxygen tanks and propane tanks, remembering active
  * weapons, and resurrecting survivors inside the safe room with weapons.
  *
- * Version 20180112 (4.3-alpha3)
+ * Version 20180113 (4.3)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
