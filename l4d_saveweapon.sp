@@ -310,7 +310,6 @@ void SavePlayerState(int client)
 			slot0ReserveAmmo[client] = onRescueSlot0ReserveAmmo[client];
 			activeSlot[client] = view_as<int>(Slot_0);
 		}
-		strcopy(slots[client][Slot_1], sizeof(slots[][]), "weapon_pistol");
 		return;
 	}
 
