@@ -1,26 +1,23 @@
 /*
  * L4D1 Save Weapon (l4d_saveweapon.sp)
  *
- * L4D1 version of Merudo's Save Weapon 4.3 L4D2 mod.
+ * L4D1 version of Merudo's Save Weapon 4.3 L4D2 plugin.
  *
  * Allows more than four survivors to retain their player states after chapter
- * map changes, player/bot takeovers, and player rejoins. The original game
- * only saves the player states for the first four survivors, forgetting the
- * states for any remaining survivors.
+ * map changes, player/bot takeovers, and player re-joins. It saves (only in
+ * co-operative campaign game mode) survivors’ health, equipment, ammo, revive
+ * count, black & white status, survivor character, and survivor model.
  *
- * This mod saves survivors' health, equipment, ammo, revive count, black &
- * white status, survivor character, and survivor model only in co-operative
- * campaign.
- *
- * Removed features from Merudo's original mod include L4D2 specific features,
- * giving SMGs to players at the start of the campaign, saving after the
- * campaign ends or changes, and SourceMod admin commands.
- *
- * Additions and changes to the original mod include correctly restoring
- * pistol(s) magazine ammo, correctly reviving incapacitated survivors inside
- * the safe room, replacing a few hard-coded constants with Cvar queries,
- * giving gas cans, oxygen tanks and propane tanks, remembering active
- * weapons, and resurrecting survivors inside the safe room with weapons.
+ * Added or modified features to Merudo's original plugin include
+ * saving/loading gas cans, oxygen tanks and propane tanks; remembering active
+ * weapons; giving primary weapons to resurrected survivors after chapter map
+ * transitions; correctly restoring pistol(s) magazine ammo; correctly counting
+ * revives for incapacitated survivors during chapter map transitions; and
+ * replaced several hard-coded constants with ConVar queries
+
+ * Removed features from the original plugin include L4D2 specific
+ * features, giving SMGs to survivors at the beginning of the campaign, saving
+ * player states at the end of the campaign, and SourceMod admin commands.
  *
  * Version 20180113 (4.3)
  * Originally written by MAKS, Electr0 and Merudo
@@ -81,7 +78,7 @@ public Plugin myinfo =
 	author = "MAKS, Electr0, Merudo, RedAndBlueEraser",
 	description = "Save beyond 4 survivors' player states",
 	version = PLUGIN_VERSION,
-	url = ""
+	url = "https://github.com/RedAndBlueEraser/l4d-saveweapon"
 }
 
 public void OnPluginStart()
