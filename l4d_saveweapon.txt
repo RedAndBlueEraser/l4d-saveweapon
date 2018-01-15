@@ -1,0 +1,16 @@
+"Games"
+{
+	"left4dead"
+	{
+		"Offsets"
+		{
+			/* CTerrorPlayer::GiveNamedItem */
+			"CTerrorPlayer_GiveNamedItem"
+			{
+				"windows"	"404"
+				"linux"		"483"
+				"mac"		"483"
+			}
+		}
+	}
+}

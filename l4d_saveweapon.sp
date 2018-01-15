@@ -19,7 +19,7 @@
  * features, giving SMGs to survivors at the beginning of the campaign, saving
  * player states at the end of the campaign, and SourceMod admin commands.
  *
- * Version 20180113 (4.3)
+ * Version 20180115 (4.3.1-alpha.1)
  * Originally written by MAKS, Electr0 and Merudo
  * Fork written by Harry Wong (RedAndBlueEraser)
  */
@@ -30,7 +30,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-#define PLUGIN_VERSION "4.3"
+#define PLUGIN_VERSION "4.3.1"
 
 #define MAX_GAME_MODE_NAME_LEN 16
 #define MAX_ENTITY_CLASSNAME_LEN 24
@@ -399,13 +399,7 @@ void LoadPlayerState(int client)
 	{
 		if (slot1IsDualWield[client])
 		{
-			if (!GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
-			{
-				int commandFlags = GetCommandFlags("give");
-				SetCommandFlags("give", commandFlags & ~FCVAR_CHEAT);
-				FakeClientCommand(client, "give %s", slot1);
-				SetCommandFlags("give", commandFlags);
-			}
+			if (!GetEntProp(item, Prop_Send, "m_hasDualWeapons")) GivePlayerItem2(client, slot1);
 		}
 		else if (GetEntProp(item, Prop_Send, "m_hasDualWeapons"))
 		{
@@ -497,9 +491,24 @@ void DeleteAllOnRescueSlot0()
 /* Give and equip a survivor with an item. */
 int GivePlayerItem2(int client, const char[] item)
 {
-	int newItem = GivePlayerItem(client, item);
-	if (newItem > -1) EquipPlayerWeapon(client, newItem);
-	return newItem;
+	static Handle CTerrorPlayer_GiveNamedItem = INVALID_HANDLE;
+	static Handle gameConfig = INVALID_HANDLE;
+	if (CTerrorPlayer_GiveNamedItem == INVALID_HANDLE)
+	{
+		if (gameConfig == INVALID_HANDLE)
+		{
+			gameConfig = LoadGameConfigFile("l4d_saveweapon");
+			if (gameConfig == INVALID_HANDLE) return -1;
+		}
+		StartPrepSDKCall(SDKCall_Player);
+		PrepSDKCall_SetFromConf(gameConfig, SDKConf_Virtual, "CTerrorPlayer_GiveNamedItem");
+		PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
+		PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+		PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+		CTerrorPlayer_GiveNamedItem = EndPrepSDKCall();
+		if (CTerrorPlayer_GiveNamedItem == INVALID_HANDLE) return -1;
+	}
+	return SDKCall(CTerrorPlayer_GiveNamedItem, client, item, 0);
 }
 
 // Remove an item from a survivor.
