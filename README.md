@@ -44,7 +44,7 @@ The plugin was not developed for and will not work with Left 4 Dead 2. Use [Meru
 The plugin was developed and tested with the newest versions of Metamod:Source and SourceMod at the time (1.10 - build 961 and 1.8 - build 6039 respectively), so assume they are the minimum recommended versions. The plugin uses the _SourcePawn Transitional Syntax_ which **requires at least SourceMod 1.7**.
 
 ## Credits
-- Harry (RedAndBlueEraser) - _Author_
+- RedAndBlueEraser - _Author_
 - Merudo - _Developer of fork of original L4D2 plugin in which this plugin is forked from_
 - Electr000999 - _Developer of fork of original L4D2 plugin_
 - maks - _Developer of original L4D2 plugin_
